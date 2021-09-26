@@ -1,4 +1,6 @@
 import  random
+from mysal import update
+from mysal import select
 print("==============================================")
 print("|------------中国工商银行账户管理系统------------|")
 print("|------------1、开户              ------------|")
@@ -13,20 +15,20 @@ bank={}
 #{'Frank': {'password': '123456', 'country': '中国', 'province': '山东', 'street': '001', 'door': '002', 'ran': 38340677, 'money': 0}}
 bank_name="汉科软地球中国老牛湾分行"#全局变量
 def bank_adduser(username,password,country,province,street,door,account,money):
-    if account in bank :#如果一个变量在容器内就运行代码
-        return 2
-    if len(bank)>=100:
+    sal="select count(*) from user"
+    param=[]
+    date=select(sal,param,mode="one")
+    # print(date)
+    if date>100:
         return 3
-    bank[account]={
-         "username":username,
-         "password":password,
-         "country":country,
-         "province":province,
-         "street":street,
-         "door":door,
-         "money":money,
-         "bank_name":bank_name
-     }
+    sal1='select * from user where account=%s'
+    param1=[account]
+    date1=select(sal1,param1)
+    if len(date1)>0:
+        return 2
+    sal2='insert into user values(%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+    param2=[account,username,password,country,province,street,door,money,bank_name]
+    update(sal2,param2)
     return 1
 
 def useradd():
@@ -55,7 +57,11 @@ def useradd():
                     开户行名称：%s
                 '''
         # 每个元素都可传入%
-        print(info % (username, account, country, province, street, door, bank[account]["money"], bank_name))
+        sal='select money from user where account=%s'
+        param=[account]
+        date=select(sal,param,mode='one')[0]
+        print(date)
+        print(info % (username, account, country, province, street, door, date, bank_name))
     elif bankadd ==2:
         print("用户已存在")
     elif bankadd == 3:
@@ -63,18 +69,28 @@ def useradd():
 
 def withdraw():
     account=int(input("请输入你的账号："))
-    if account in bank:
+    sal = "select * from user where account=%s"
+    param = [account]
+    date = select(sal, param)
+    if len(date) > 0:
         while True:
             password=input("请输入您的密码")
-            if password == bank[account]["password"]:
+            sal1='select password from user where account=%s'
+            param1=[account]
+            date1=select(sal1,param1,mode='one')[0]
+            if password == date1:
                 withdraw_money=int(input("请输入你要取款的金额："))
-                if withdraw_money > bank[account]["money"]:
-                    print("您的余额不足！余额：",bank[account]["money"])
+                sal2='select money from user where account=%s'
+                param2=[account]
+                date2=select(sal2,param2,mode='one')[0]
+                if withdraw_money > date2:
+                    print("您的余额不足！余额：",date2)
                     break
                 else:
-                    balance=bank[account]["money"]- withdraw_money
-                    print("取钱成功！您的余额为：",balance)
-                    bank[account]["money"]=balance
+                    sal3='update user set money =money-%s'
+                    param3=[withdraw_money]
+                    date3=update(sal3,param3)
+                    print("取钱成功！您的余额为：",date3)
                     break
             else:
                 n=4
@@ -90,26 +106,54 @@ def withdraw():
 
 def saving():
     account=int(input("请输入你的账号："))
-    if account in bank:
+    sal="select * from user where account=%s"
+    param=[account]
+    date=select(sal,param)
+    if len(date)>0:
         money=int(input("请输入你要存入的金额："))
-        bank[account]["money"]+=money
-        print("存款成功！你的余额为：",bank[account]["money"])
+        sal1='update user set money=money+%s'
+        param1=[money]
+        update(sal1,param1)
+        sal2='select money from user where account=%s'
+        param2=[account]
+        date1=select(sal2,param2)
+        print("存款成功！你的余额为：",date1)
     else:
         print("您输入的账号不存在！")
 
 def transfer():
     account=int(input("请输入您的账号"))
-    if account in bank:
+    sal = "select * from user where account=%s"
+    param = [account]
+    date = select(sal, param)
+    if len(date) > 0:
         account2=int(input("请输入您要转账的账号："))
-        if account2 in bank:
+        sal1 = "select * from user where account=%s"
+        param1 = [account2]
+        date1 = select(sal1, param1)
+        if len(date1) > 0:
             password=input("请输入您的密码")
+            sal2 = 'select password from user where account=%s'
+            param2 = [account]
+            date2 = select(sal2, param2,mode='one')[0]
             while True:
-                if password == bank[account]["password"]:
+                if password == date2:
                     money=int(input("请输入您要转账的金额："))
-                    bank[account]["money"]-=money
-                    bank[account2]["money"]+=money
-                    print("转账成功！您的余额为：",bank[account]["money"])
-                    break
+                    sal3='select money from user where account=%s'
+                    param3=[account]
+                    date3=select(sal3,param3,mode='one')[0]
+                    if money>date3:
+                        print('您的余额不足，转账失败！')
+                        break
+                    else:
+                        sal4='update user set money=money-%s'
+                        param4=[money]
+                        update(sal4,param4)
+                        sal5='select money from user where account=%s'
+                        param5=[account]
+                        date4=select(sal5,param5)
+                        print("转账成功！您的余额为：",date4)
+                        break
                 else:
                     n=4
                     m=0
@@ -126,11 +170,20 @@ def transfer():
 
 def inquire():
     account=int(input("请输入您要查询的账号："))
-    if account in bank :
+    sal = "select * from user where account=%s"
+    param = [account]
+    date = select(sal, param)
+    if len(date)>0:
         password=input("请输入密码")
+        sal2 = 'select password from user where account=%s'
+        param2 = [account]
+        date2 = select(sal2, param2,mode='one')[0]
         while True:
-            if password ==bank[account]["password"]:
-                print("当前账号：",account,",密码：******,用户居住地：",bank[account]["country"]["province"]["street"]["door"],"，开户行：",bank[account]["bank_name"])
+            if password ==date2:
+                sal3='select * from user where account=%s'
+                param3=[account]
+                date3=select(sal3,param3)
+                print(date3)
                 break
             else:
                 n=4
